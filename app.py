@@ -1,10 +1,9 @@
 import streamlit as st
-import openai
+from transformers import pipeline
 
-st.set_page_config(page_title="ReplyAI")
-
-st.title("📧 ReplyAI - AI Customer Support Email Generator")
-st.write("Generate professional customer support replies in seconds.")
+st.set_page_config(page_title="ReplyAI (Free)")
+st.title("📧 ReplyAI - Free AI Customer Support Email Generator")
+st.write("Generate professional customer support replies without any API keys!")
 
 # ------------------------------
 # Free usage limit
@@ -15,7 +14,7 @@ if "used_count" not in st.session_state:
 MAX_FREE_REPLIES = 5
 
 if st.session_state.used_count >= MAX_FREE_REPLIES:
-    st.error("Free limit reached. Please upgrade to continue.")
+    st.error("Free limit reached. Upgrade or refresh to continue.")
     st.stop()
 
 # ------------------------------
@@ -23,12 +22,16 @@ if st.session_state.used_count >= MAX_FREE_REPLIES:
 # ------------------------------
 email_text = st.text_area("Paste customer email here", height=150)
 tone = st.selectbox("Reply tone", ["Professional", "Friendly", "Polite"])
-company = st.text_input("Company name")
+company = st.text_input("Company name", "")
 
 # ------------------------------
-# API key from Streamlit secrets
+# Initialize Hugging Face generator
 # ------------------------------
-openai.api_key = st.secrets.get("OPENAI_API_KEY", "")
+@st.cache_resource(show_spinner=False)
+def load_model():
+    return pipeline("text2text-generation", model="google/flan-t5-small")
+
+generator = load_model()
 
 # ------------------------------
 # Generate AI reply
@@ -36,33 +39,19 @@ openai.api_key = st.secrets.get("OPENAI_API_KEY", "")
 if st.button("Generate Reply"):
     if not email_text.strip():
         st.warning("Please paste an email to generate a reply.")
-    elif not openai.api_key:
-        st.error("OpenAI API key not found! Add it in Streamlit Secrets.")
     else:
+        # Build prompt for the model
         prompt = f"""
-You are a professional customer support assistant.
+You are a professional customer support assistant for {company}.
+Tone: {tone}.
+Reply professionally and politely to this email:
 
-Rules:
-- Be polite and professional
-- Do not make refunds or promises
-- Keep the response under 120 words
-- End with a friendly closing
-- Mention this is an automated draft
-
-Company: {company}
-Tone: {tone}
-
-Customer email:
 {email_text}
 """
 
         try:
-            response = openai.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=300
-            )
-            reply_text = response.choices[0].message.content
+            reply = generator(prompt, max_length=150, do_sample=True, temperature=0.7)
+            reply_text = reply[0]["generated_text"]
 
             st.session_state.used_count += 1
 
