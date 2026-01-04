@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+import OpenAI
 
 st.set_page_config(page_title="AI Support Email Generator")
 
@@ -41,12 +41,16 @@ Customer email:
 {email_text}
 """
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
-        )
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+response = openai.ChatCompletion.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": prompt}]
+)
+
 
         st.session_state.count += 1
 
         st.subheader("Generated Reply")
-        st.text_area("Reply", response.choices[0].message.content, height=200)
+        st.text_area("Reply", response.choices[0].message['content'], height=200)
+
