@@ -3,7 +3,7 @@ from transformers import pipeline
 
 st.set_page_config(page_title="ReplyAI (Free)")
 st.title("📧 ReplyAI - Free AI Customer Support Email Generator")
-st.write("Generate professional customer support replies without any API keys!")
+st.write("Generate professional customer support replies in seconds — no API keys required!")
 
 # ------------------------------
 # Free usage limit
@@ -14,7 +14,7 @@ if "used_count" not in st.session_state:
 MAX_FREE_REPLIES = 5
 
 if st.session_state.used_count >= MAX_FREE_REPLIES:
-    st.error("Free limit reached. Upgrade or refresh to continue.")
+    st.error("Free limit reached. Refresh or upgrade to continue.")
     st.stop()
 
 # ------------------------------
@@ -29,7 +29,8 @@ company = st.text_input("Company name", "")
 # ------------------------------
 @st.cache_resource(show_spinner=False)
 def load_model():
-    return pipeline("text2text-generation", model="google/flan-t5-small")
+    # Use larger Flan-T5 model for better responses
+    return pipeline("text2text-generation", model="google/flan-t5-large")
 
 generator = load_model()
 
@@ -40,19 +41,38 @@ if st.button("Generate Reply"):
     if not email_text.strip():
         st.warning("Please paste an email to generate a reply.")
     else:
-        # Build prompt for the model
+        # Robust prompt for professional, friendly replies
         prompt = f"""
-You are a professional customer support assistant for {company}.
-Tone: {tone}.
-Reply professionally and politely to this email:
+You are an AI customer support assistant for {company}. 
+Write a complete email reply to the customer below.
 
+Rules:
+- Tone: {tone} (Friendly / Professional / Polite)
+- Keep it under 120 words
+- Do not repeat the customer's email
+- Begin with a greeting (e.g., "Hello," "Hi," etc.)
+- End with a friendly closing (e.g., "Best regards," "Thank you," etc.)
+- Keep it concise and professional
+
+Customer email:
 {email_text}
 """
 
         try:
-            reply = generator(prompt, max_length=150, do_sample=True, temperature=0.7)
+            # Generate reply
+            reply = generator(
+                prompt,
+                max_length=200,
+                do_sample=True,
+                temperature=0.7
+            )
             reply_text = reply[0]["generated_text"]
 
+            # Remove accidental repetition
+            if email_text in reply_text:
+                reply_text = reply_text.replace(email_text, "").strip()
+
+            # Update usage count
             st.session_state.used_count += 1
 
             st.subheader("Generated Reply")
