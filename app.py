@@ -1,14 +1,13 @@
 import streamlit as st
 import openai
 
-# Streamlit page config
-st.set_page_config(page_title="AI Support Email Generator")
+st.set_page_config(page_title="ReplyAI")
 
-st.title("📧 AI Customer Support Email Generator")
+st.title("📧 ReplyAI - AI Customer Support Email Generator")
 st.write("Generate professional customer support replies in seconds.")
 
 # ------------------------------
-# Free usage limit per session
+# Free usage limit
 # ------------------------------
 if "used_count" not in st.session_state:
     st.session_state.used_count = 0
@@ -20,7 +19,7 @@ if st.session_state.used_count >= MAX_FREE_REPLIES:
     st.stop()
 
 # ------------------------------
-# Input fields
+# Inputs
 # ------------------------------
 email_text = st.text_area("Paste customer email here", height=150)
 tone = st.selectbox("Reply tone", ["Professional", "Friendly", "Polite"])
@@ -56,18 +55,19 @@ Tone: {tone}
 Customer email:
 {email_text}
 """
+
         try:
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300
             )
-            reply_text = response.choices[0].message['content']
+            reply_text = response.choices[0].message.content
 
-            # Update usage count
             st.session_state.used_count += 1
 
             st.subheader("Generated Reply")
             st.text_area("Reply", reply_text, height=200)
+
         except Exception as e:
             st.error(f"Error generating reply: {e}")
